@@ -43,15 +43,7 @@ def risk_calculation(engine : ValuationEngineProduct):
     # Preserve the original assignment's direct-IFR report and state_gradient API.
     if not any(component.calibration_product for component in engine.model.components_.values()):
         return RiskReport.from_model_gradient(engine.model, gradient)
-    # dV/dX^M = dV/dX^I \cdot J^{-1}, where J is the model jacobian dX^M/dX^I
-    # step 1: flatten gradient
-    gradient_flat = np.concatenate(gradient, axis=0) # dim : 1 x len(X^I)
-    # step 2: get model (lazy) jacobian
+    gradient_flat = np.concatenate(gradient)
     engine.model.calculate_model_jacobian()
-    # TODO 4: Set risk to the row gradient with respect to X^M, using
-    # gradient_flat and engine.model.model_jacobian as in the template.
-    # Keep raw decimal-rate units; report display applies the bp scaling.
-    raise NotImplementedError("TODO 4: transform internal risk to market-quote risk")
-    # step 5: make a nice report
-    risk_report = RiskReprt(engine.model.risk_postprocess(risk))
-    return risk_report
+    risk = np.linalg.solve(engine.model.model_jacobian.T, gradient_flat)
+    return RiskReprt(engine.model.risk_postprocess(risk))
