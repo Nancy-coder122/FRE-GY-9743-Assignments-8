@@ -145,17 +145,15 @@ class YieldCurve(Model):
                 continue
             # calculate calibration instrument gradient
             grads = []
-            for _, (prod, funding) in enumerate(zip(calib_prod, calib_funding)):
+            for prod, funding in zip(calib_prod, calib_funding):
                 fi_vp = FundingIndexParameter({"Funding Index": funding})
                 vpc = ValuationParametersCollection([fi_vp])
                 engine = ValuationEngineProductRegistry.new_valuation_engine(
                     self, prod, vpc, ValuationRequest.PV_DETAILED
                 )
                 engine.calculate_value()
-                # TODO 3: Append this instrument's par-rate gradient as one
-                # Jacobian row, flattening blocks in model component order.
-                raise NotImplementedError("TODO 3: construct a calibration Jacobian row")
-            jacobian_pre[index] = grads  # np.concatenate(grads, axis=0)
+                grads.append(np.concatenate(engine.grad_at_par()))
+            jacobian_pre[index] = grads
 
         self.model_jacobian_ = (
             block_diag(*jacobian_pre) if only_state_data else np.concatenate(jacobian_pre, axis=0)
